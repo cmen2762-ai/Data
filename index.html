@@ -251,7 +251,7 @@
 
                 <button onclick="switchTab('preview')" id="nav-preview" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-emerald-300 bg-emerald-950/50 border border-emerald-800/60 hover:bg-emerald-900/60 transition-all">
                     <i class="fa-solid fa-file-pdf w-5 text-center text-emerald-400"></i>
-                    <span>Pratinjau & Cetak Rapor (3 Hal)</span>
+                    <span>Pratinjau & Cetak Rapor</span>
                 </button>
 
                 <button onclick="switchTab('rekap')" id="nav-rekap" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-amber-300 hover:bg-slate-800 hover:text-white transition-all mt-1">
@@ -331,7 +331,11 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Semester</label>
-                            <input type="text" id="in-semester" placeholder="Contoh: 2 (Dua)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()">
+                            <select id="in-semester" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white" onchange="syncData()">
+                                <option value="">-- Pilih Semester --</option>
+                                <option value="1 (Satu)">1 (Satu)</option>
+                                <option value="2 (Dua)">2 (Dua)</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Tahun Pelajaran</label>
@@ -544,7 +548,8 @@
                     </div>
 
                     <!-- Keputusan Kenaikan Kelas -->
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <!-- Keputusan Kenaikan Kelas (Hanya muncul jika Semester 2) -->
+                    <div id="form-keputusan-card" class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80 hidden">
                         <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
                             Kotak Keputusan Kenaikan Kelas (Halaman 3)
                         </h3>
@@ -554,7 +559,6 @@
                                 <select id="in-keputusan-status" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-medium" onchange="syncData()">
                                     <option value="NAIK">NAIK KELAS (Coret Tinggal Kelas)</option>
                                     <option value="TINGGAL">TINGGAL KELAS (Coret Naik Kelas)</option>
-                                    <option value="NONE">Tidak Dicoret Keduanya (Semester 1)</option>
                                 </select>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
@@ -929,8 +933,8 @@
                                         </table>
                                     </div>
 
-                                    <!-- Kotak Keputusan -->
-                                    <div class="w-[48%] border border-black p-3.5 text-[11.5px] leading-relaxed">
+                                    <!-- Kotak Keputusan (Hanya tampil pada Semester 2) -->
+                                    <div id="out-keputusan-box" class="w-[48%] border border-black p-3.5 text-[11.5px] leading-relaxed hidden">
                                         <p class="font-bold mb-1">Keputusan:</p>
                                         <p class="mb-3">Berdasarkan pencapaian seluruh kompetensi, peserta didik dinyatakan:</p>
                                         <p class="font-bold tracking-wide">
@@ -1031,7 +1035,7 @@
                         </div>
                         <div>
                             <h3 class="text-base font-bold text-slate-800">Koneksi</h3>
-                            <p class="text-xs text-slate-500"></p>
+                            <p class="text-xs text-slate-500">Hubungkan</p>
                         </div>
                     </div>
 
@@ -1297,14 +1301,14 @@
 
             if (window.innerWidth < 1024) {
                 const sidebar = document.getElementById('sidebar');
-                if (!sidebar.classList.contains('-translate-x-full')) {
+                if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
                     toggleSidebar();
                 }
             }
         }
 
         function hitungPredikat(nilaiStr, kkm) {
-            if (nilaiStr === "" || nilaiStr === null || isNaN(Number(nilaiStr))) return "";
+            if (nilaiStr === "" || nilaiStr === null || nilaiStr === undefined || isNaN(Number(nilaiStr))) return "";
             const n = Number(nilaiStr);
             const k = Number(kkm) || 60;
             const interval = (100 - k) / 3;
@@ -1312,6 +1316,24 @@
             if (n < k + interval) return "C";
             if (n < k + (interval * 2)) return "B";
             return "A";
+        }
+
+        function isSemesterDua(semStr) {
+            const s = (semStr || "").toLowerCase().trim();
+            return s.startsWith("2") || s.includes("dua");
+        }
+
+        function updateKeputusanVisibility() {
+            const showKeputusan = isSemesterDua(raporData.identitas.semester);
+            const formCard = document.getElementById('form-keputusan-card');
+            const outBox = document.getElementById('out-keputusan-box');
+
+            if (formCard) {
+                formCard.classList.toggle('hidden', !showKeputusan);
+            }
+            if (outBox) {
+                outBox.classList.toggle('hidden', !showKeputusan);
+            }
         }
 
         function populateForms() {
@@ -1360,6 +1382,7 @@
             document.getElementById('in-kepsek-nama').value = raporData.pengesahan.kepsekNama || "";
             document.getElementById('in-kepsek-nip').value = raporData.pengesahan.kepsekNip || "";
 
+            updateKeputusanVisibility();
             updateSidebarStudentInfo();
         }
 
@@ -1565,6 +1588,7 @@
             raporData.pengesahan.kepsekNama = document.getElementById('in-kepsek-nama').value;
             raporData.pengesahan.kepsekNip = document.getElementById('in-kepsek-nip').value;
 
+            updateKeputusanVisibility();
             updateSidebarStudentInfo();
             saveToLocalStorageQuietly();
         }
@@ -1662,7 +1686,10 @@
             tbody.innerHTML = filtered.map((item, index) => {
                 const d = item.data;
                 const rataRata = hitungRataRataSiswa(d);
-                const statusKep = d.keputusan?.status === 'NAIK'
+                const semDua = isSemesterDua(d.identitas.semester);
+                const statusKep = !semDua
+                    ? `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">Semester 1</span>`
+                    : d.keputusan?.status === 'NAIK'
                     ? `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">NAIK KELAS ${d.keputusan.romawi || ''}</span>`
                     : d.keputusan?.status === 'TINGGAL'
                     ? `<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold">TINGGAL KELAS</span>`
@@ -1817,8 +1844,8 @@
             document.getElementById('out-sakit').textContent = raporData.absensi.sakit;
             document.getElementById('out-izin').textContent = raporData.absensi.izin;
             document.getElementById('out-alpha').textContent = raporData.absensi.alpha;
-
-            // Keputusan Kenaikan
+            // Keputusan Kenaikan (Hanya tampil saat Semester 2)
+            updateKeputusanVisibility();
             const elNaik = document.getElementById('out-kep-naik');
             const elTinggal = document.getElementById('out-kep-tinggal');
             elNaik.classList.remove('line-through');
