@@ -123,7 +123,7 @@
             </div>
 
             <!-- Form Login -->
-            <form onsubmit="handleLogin(event)" class="p-7 space-y-5">
+            <form id="login-form" onsubmit="handleLogin(event)" class="p-7 space-y-5">
                 <div id="login-error" class="hidden p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2.5">
                     <i class="fa-solid fa-circle-exclamation text-rose-500 text-base shrink-0"></i>
                     <span>Username atau Kata Sandi salah! Silakan periksa kembali.</span>
@@ -156,6 +156,31 @@
                     <i class="fa-solid fa-right-to-bracket"></i> Masuk ke Aplikasi
                 </button>
             </form>
+
+            <!-- Animasi Progres Login & Muat Data Aplikasi (1% - 100%) -->
+            <div id="login-loading-panel" class="hidden p-8 text-center space-y-5">
+                <div class="relative w-24 h-24 mx-auto flex items-center justify-center">
+                    <svg class="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" stroke="#e2e8f0" stroke-width="8" fill="none"></circle>
+                        <circle id="login-progress-ring" cx="50" cy="50" r="42" stroke="#2563eb" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="263.89" stroke-dashoffset="261.25" class="transition-all duration-150"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span id="login-percent-text" class="text-xl font-extrabold text-blue-700">1%</span>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <p id="login-status-title" class="text-base font-bold text-slate-800 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i>
+                        <span>Sedang Login...</span>
+                    </p>
+                    <p id="login-status-subtitle" class="text-xs text-slate-500">Memverifikasi akun pengguna...</p>
+                </div>
+
+                <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden border border-slate-200 p-0.5">
+                    <div id="login-progress-bar" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 h-full rounded-full transition-all duration-150" style="width: 1%;"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -251,7 +276,7 @@
 
                 <button onclick="switchTab('preview')" id="nav-preview" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-emerald-300 bg-emerald-950/50 border border-emerald-800/60 hover:bg-emerald-900/60 transition-all">
                     <i class="fa-solid fa-file-pdf w-5 text-center text-emerald-400"></i>
-                    <span>Pratinjau & Cetak Rapor</span>
+                    <span>Pratinjau Rapor</span>
                 </button>
 
                 <button onclick="switchTab('rekap')" id="nav-rekap" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-amber-300 hover:bg-slate-800 hover:text-white transition-all mt-1">
@@ -994,10 +1019,13 @@
                                 <i class="fa-solid fa-clipboard-list text-amber-500"></i>
                                 Rekapitulasi Rapor Peserta Didik Terkirim
                             </h3>
-                            <p class="text-xs text-slate-500 mt-0.5">Daftar peserta didik yang telah dikirim ke Google Sheet. Klik <strong>Cetak Rapor</strong> untuk membuka & mencetak format rapor 3 halaman.</p>
+                            <p class="text-xs text-slate-500 mt-0.5">Daftar peserta didik yang tersimpan di Google Sheet & Rekap Lokal. Klik <strong>Cetak Rapor</strong> untuk membuka & mencetak format rapor 3 halaman.</p>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <input type="text" id="rekap-search" oninput="renderRekapTable()" placeholder="Cari nama / NISN..." class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <button onclick="syncRekapFromGoogleSheet(true)" id="btn-sync-rekap" class="px-3.5 py-2 bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 shrink-0">
+                                <i class="fa-solid fa-rotate"></i> Muat Ulang Data
+                            </button>
                             <button onclick="mulaiPesertaBerikutnya()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 shrink-0">
                                 <i class="fa-solid fa-user-plus"></i> Input Peserta Baru
                             </button>
@@ -1035,13 +1063,13 @@
                         </div>
                         <div>
                             <h3 class="text-base font-bold text-slate-800">Koneksi</h3>
-                            <p class="text-xs text-slate-500">Hubungkan</p>
+                            <p class="text-xs text-slate-500"></p>
                         </div>
                     </div>
 
                     <div class="space-y-4">
                         <div>
-                            <label for="in-gsheet-url" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">URL Web</label>
+                            <label for="in-gsheet-url" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">URL Web App</label>
                             <input type="url" id="in-gsheet-url" value="https://script.google.com/macros/s/AKfycbxXYXiC37yjoxaIF7DGpZ48yGtqZKpofb692qaH1vDRtxqT7UaFDW6arxSyYBtm5yDTlg/exec" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm font-mono">
                             <p class="text-[11px] text-emerald-600 font-medium mt-1.5"><i class="fa-solid fa-circle-check mr-1"></i> URL Web App telah terpasang otomatis. Sheet <strong>Database_Rapor_SD</strong> beserta seluruh kolom header akan dibuat otomatis saat data dikirim.</p>
                         </div>
@@ -1198,23 +1226,171 @@
             } else {
                 loginScreen.classList.remove('hidden');
                 appWrapper.classList.add('hidden');
+                resetLoginUI();
             }
         }
 
-        function handleLogin(event) {
+        function resetLoginUI() {
+            const form = document.getElementById('login-form');
+            const loadingPanel = document.getElementById('login-loading-panel');
+            if (form) form.classList.remove('hidden');
+            if (loadingPanel) loadingPanel.classList.add('hidden');
+            updateLoginProgress(1, "Sedang Login...", "Memverifikasi akun pengguna...");
+        }
+
+        function updateLoginProgress(percent, titleText, subtitleText) {
+            const clamped = Math.max(1, Math.min(100, Math.round(percent)));
+            const pctText = document.getElementById('login-percent-text');
+            const bar = document.getElementById('login-progress-bar');
+            const ring = document.getElementById('login-progress-ring');
+            const titleEl = document.getElementById('login-status-title');
+            const subEl = document.getElementById('login-status-subtitle');
+
+            if (pctText) pctText.textContent = clamped + "%";
+            if (bar) bar.style.width = clamped + "%";
+            if (ring) {
+                const circumference = 263.89;
+                const offset = circumference - (clamped / 100) * circumference;
+                ring.style.strokeDashoffset = offset;
+            }
+            if (titleEl && titleText) {
+                titleEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i><span>${titleText}</span>`;
+            }
+            if (subEl && subtitleText) {
+                subEl.textContent = subtitleText;
+            }
+        }
+
+        async function syncRekapFromGoogleSheet(showNotif = false) {
+            const scriptUrl = document.getElementById('in-gsheet-url')?.value.trim() || localStorage.getItem('erapor_sd_gsheet_url') || DEFAULT_GSHEET_URL;
+            if (!scriptUrl) return false;
+
+            const btn = document.getElementById('btn-sync-rekap');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat...';
+            }
+
+            try {
+                const response = await fetch(scriptUrl, { method: 'GET' });
+                const result = await response.json();
+
+                if (result && Array.isArray(result.records)) {
+                    // Gabungkan data dari Google Sheet dengan data lokal tanpa duplikasi
+                    const mergedMap = new Map();
+                    rekapList.forEach(item => {
+                        const key = (item.data.identitas.nisn || item.data.identitas.nama || item.id).toLowerCase().trim();
+                        mergedMap.set(key, item);
+                    });
+                    result.records.forEach(item => {
+                        const key = (item.data.identitas.nisn || item.data.identitas.nama || item.id).toLowerCase().trim();
+                        mergedMap.set(key, item);
+                    });
+
+                    rekapList = Array.from(mergedMap.values());
+                    saveRekapList();
+                    renderRekapTable();
+
+                    // Jika identitas sekolah pada form aktif masih kosong, isi otomatis dari data rekap terakhir
+                    if (!raporData.identitas.sekolah && rekapList.length > 0) {
+                        const latest = rekapList[rekapList.length - 1].data;
+                        raporData.identitas.sekolah = latest.identitas.sekolah || "";
+                        raporData.identitas.alamat = latest.identitas.alamat || "";
+                        raporData.identitas.kelas = latest.identitas.kelas || "";
+                        raporData.identitas.semester = latest.identitas.semester || "";
+                        raporData.identitas.tahun = latest.identitas.tahun || "";
+                        raporData.identitas.kkm = latest.identitas.kkm || 60;
+                        raporData.pengesahan.tempatTanggal = latest.pengesahan?.tempatTanggal || "";
+                        raporData.pengesahan.waliNama = latest.pengesahan?.waliNama || "";
+                        raporData.pengesahan.waliNip = latest.pengesahan?.waliNip || "";
+                        raporData.pengesahan.kepsekNama = latest.pengesahan?.kepsekNama || "";
+                        raporData.pengesahan.kepsekNip = latest.pengesahan?.kepsekNip || "";
+                        saveToLocalStorageQuietly();
+                        populateForms();
+                    }
+
+                    if (showNotif) {
+                        showToast(`Berhasil memuat ${result.records.length} data peserta didik dari Google Sheet!`);
+                    }
+                    return true;
+                }
+            } catch (err) {
+                console.warn("Gagal mengambil data dari Google Sheet:", err);
+                if (showNotif) {
+                    showToast("Gagal memuat data dari Google Sheet. Pastikan Apps Script sudah di-deploy ulang.");
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = origHtml;
+                }
+            }
+            return false;
+        }
+
+        async function handleLogin(event) {
             event.preventDefault();
             const user = document.getElementById('login-username').value.trim();
             const pass = document.getElementById('login-password').value;
             const errorBox = document.getElementById('login-error');
 
-            if (user === AUTH_CREDENTIALS.username && pass === AUTH_CREDENTIALS.password) {
-                errorBox.classList.add('hidden');
-                sessionStorage.setItem('erapor_sd_logged_in', 'true');
-                checkAuthStatus();
-                showToast("Selamat datang di Aplikasi e-Rapor SD!");
-            } else {
+            if (user !== AUTH_CREDENTIALS.username || pass !== AUTH_CREDENTIALS.password) {
                 errorBox.classList.remove('hidden');
+                return;
             }
+
+            errorBox.classList.add('hidden');
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('login-loading-panel').classList.remove('hidden');
+
+            let currentPercent = 1;
+            updateLoginProgress(1, "Sedang Login...", "Memverifikasi akun pengguna...");
+
+            // Tahap 1: Animasi 1% - 40% ("Sedang Login...")
+            await new Promise(resolve => {
+                const timer1 = setInterval(() => {
+                    currentPercent += 3;
+                    if (currentPercent >= 40) {
+                        currentPercent = 40;
+                        updateLoginProgress(currentPercent, "Sedang memuat Data Aplikasi...", "Menghubungkan & mengambil data peserta didik...");
+                        clearInterval(timer1);
+                        resolve();
+                    } else {
+                        updateLoginProgress(currentPercent, "Sedang Login...", "Memverifikasi akun pengguna...");
+                    }
+                }, 35);
+            });
+
+            // Tahap 2: Animasi berjalan 40% - 92% sambil mengambil data dari Google Sheet ("Sedang memuat Data Aplikasi...")
+            const timer2 = setInterval(() => {
+                if (currentPercent < 92) {
+                    currentPercent += 2;
+                    updateLoginProgress(currentPercent, "Sedang memuat Data Aplikasi...", "Sinkronisasi data rapor peserta didik...");
+                }
+            }, 60);
+
+            await syncRekapFromGoogleSheet(false);
+            clearInterval(timer2);
+
+            // Tahap 3: Selesaikan progres menuju 100%
+            await new Promise(resolve => {
+                const timer3 = setInterval(() => {
+                    currentPercent += 4;
+                    if (currentPercent >= 100) {
+                        currentPercent = 100;
+                        updateLoginProgress(100, "Sedang memuat Data Aplikasi...", "Data aplikasi siap digunakan!");
+                        clearInterval(timer3);
+                        setTimeout(resolve, 280);
+                    } else {
+                        updateLoginProgress(currentPercent, "Sedang memuat Data Aplikasi...", "Menyiapkan tampilan aplikasi...");
+                    }
+                }, 25);
+            });
+
+            sessionStorage.setItem('erapor_sd_logged_in', 'true');
+            checkAuthStatus();
+            showToast(`Login berhasil! ${rekapList.length} data peserta didik tersedia di Rekap.`);
         }
 
         function handleLogout() {
