@@ -1,0 +1,1927 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>e-Rapor SD - Sistem Pengolahan & Cetak Rapor Peserta Didik</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Arial/Times fallback for print -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+        }
+
+        /* Gaya Khusus Dokumen Rapor Resmi (Menyerupai e-Rapor SD pada Gambar) */
+        .rapor-document {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #000000;
+            background: #ffffff;
+            line-height: 1.35;
+        }
+
+        .rapor-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+        }
+
+        .rapor-table th, .rapor-table td {
+            border: 1px solid #000000;
+            padding: 5px 6px;
+            vertical-align: middle;
+        }
+
+        .rapor-table th {
+            background-color: #e2e8f0;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .rapor-page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 15mm 15mm 18mm 15mm;
+            margin: 0 auto 24px auto;
+            background: white;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .rapor-footer {
+            border-top: 1px solid #000000;
+            padding-top: 4px;
+            margin-top: 20px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #1e293b;
+        }
+
+        /* Pengaturan Cetak (Print Media Query) */
+        @media print {
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none !important;
+            }
+            #main-content {
+                margin-left: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+            }
+            .rapor-page {
+                width: 100%;
+                min-height: 285mm;
+                margin: 0;
+                padding: 10mm 12mm;
+                box-shadow: none;
+                page-break-after: always;
+            }
+            .rapor-page:last-child {
+                page-break-after: auto;
+            }
+            .rapor-table th {
+                background-color: #e2e8f0 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+
+        /* Responsif pratinjau kertas di layar kecil */
+        @media (max-width: 900px) {
+            .rapor-scroll-wrapper {
+                overflow-x: auto;
+                padding-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased">
+
+    <!-- Halaman Login (Muncul Sebelum Masuk ke Aplikasi) -->
+    <div id="login-screen" class="no-print fixed inset-0 z-50 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200/20">
+            <!-- Header Kartu Login -->
+            <div class="bg-gradient-to-r from-blue-700 to-indigo-800 p-7 text-center text-white">
+                <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center shadow-inner border border-white/20">
+                    <i class="fa-solid fa-graduation-cap text-3xl text-amber-300"></i>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight">e-Rapor SD</h1>
+                <p class="text-xs text-blue-100 mt-1">Sistem Pengolahan & Cetak Rapor Peserta Didik</p>
+            </div>
+
+            <!-- Form Login -->
+            <form onsubmit="handleLogin(event)" class="p-7 space-y-5">
+                <div id="login-error" class="hidden p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2.5">
+                    <i class="fa-solid fa-circle-exclamation text-rose-500 text-base shrink-0"></i>
+                    <span>Username atau Kata Sandi salah! Silakan periksa kembali.</span>
+                </div>
+
+                <div>
+                    <label for="login-username" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                            <i class="fa-solid fa-user"></i>
+                        </span>
+                        <input type="text" id="login-username" required autocomplete="username" placeholder="Masukkan Username" class="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm font-medium transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="login-password" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">Kata Sandi</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" id="login-password" required autocomplete="current-password" placeholder="Masukkan Kata Sandi" class="w-full pl-10 pr-11 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-sm font-medium transition">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none">
+                            <i id="eye-icon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/25 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Masuk ke Aplikasi
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notifikasi Toast -->
+    <div id="toast" class="no-print fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toast-message" class="text-sm font-medium">Data berhasil disimpan!</span>
+    </div>
+
+    <!-- Wrapper Aplikasi Utama (Tersembunyi sebelum Login berhasil) -->
+    <div id="app-wrapper" class="hidden">
+
+    <!-- Header Mobile -->
+    <header class="no-print lg:hidden bg-blue-900 text-white p-4 flex items-center justify-between sticky top-0 z-30 shadow-md">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center">
+                <i class="fa-solid fa-graduation-cap text-amber-400"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base leading-tight">e-Rapor SD</h1>
+                <p class="text-[11px] text-blue-200">Kurikulum 2013</p>
+            </div>
+        </div>
+        <button onclick="toggleSidebar()" class="p-2 rounded-lg bg-blue-800 hover:bg-blue-700 focus:outline-none">
+            <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+    </header>
+
+    <!-- Overlay Sidebar Mobile -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()" class="no-print fixed inset-0 bg-slate-900/50 z-30 hidden lg:hidden"></div>
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar Navigasi -->
+        <aside id="sidebar" class="no-print fixed lg:sticky top-0 left-0 z-40 w-72 h-screen bg-slate-900 text-slate-200 flex flex-col transition-transform duration-300 -translate-x-full lg:translate-x-0 shadow-xl">
+            <!-- Brand Logo -->
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-lg">
+                        <i class="fa-solid fa-book-open-reader text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-lg tracking-tight">e-Rapor SD</h1>
+                        <p class="text-xs text-slate-400">Aplikasi Rapor Digital</p>
+                    </div>
+                </div>
+                <button onclick="toggleSidebar()" class="lg:hidden text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Info Siswa Aktif -->
+            <div class="px-4 py-3 bg-slate-800/60 border-b border-slate-800">
+                <p class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold">Peserta Didik Aktif</p>
+                <p id="sidebar-student-name" class="text-sm font-bold text-white truncate mt-0.5">-</p>
+                <p id="sidebar-student-class" class="text-xs text-blue-400">Belum ada data kelas</p>
+            </div>
+
+            <!-- Menu Navigasi Berurutan sesuai Bagian Rapor -->
+            <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+                <div class="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Input Data Rapor</div>
+                
+                <button onclick="switchTab('identitas')" id="nav-identitas" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-600 text-white shadow-md">
+                    <i class="fa-solid fa-id-card w-5 text-center"></i>
+                    <span>1. Identitas & Sekolah</span>
+                </button>
+
+                <button onclick="switchTab('sikap')" id="nav-sikap" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-heart-pulse w-5 text-center"></i>
+                    <span>2. A. Sikap (Spiritual & Sosial)</span>
+                </button>
+
+                <button onclick="switchTab('nilai')" id="nav-nilai" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-list-ol w-5 text-center"></i>
+                    <span>3. B. Nilai Mapel & Mulok</span>
+                </button>
+
+                <button onclick="switchTab('ekskul')" id="nav-ekskul" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-medal w-5 text-center"></i>
+                    <span>4. C & D. Ekskul & Saran</span>
+                </button>
+
+                <button onclick="switchTab('kesehatan')" id="nav-kesehatan" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-notes-medical w-5 text-center"></i>
+                    <span>5. E & F. Fisik & Kesehatan</span>
+                </button>
+
+                <button onclick="switchTab('akhir')" id="nav-akhir" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all">
+                    <i class="fa-solid fa-award w-5 text-center"></i>
+                    <span>6. G, H, Keputusan & TTD</span>
+                </button>
+
+                <div class="pt-4 pb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Output Dokumen</div>
+
+                <button onclick="switchTab('preview')" id="nav-preview" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-emerald-300 bg-emerald-950/50 border border-emerald-800/60 hover:bg-emerald-900/60 transition-all">
+                    <i class="fa-solid fa-file-pdf w-5 text-center text-emerald-400"></i>
+                    <span>Pratinjau & Cetak Rapor (3 Hal)</span>
+                </button>
+
+                <button onclick="switchTab('rekap')" id="nav-rekap" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-amber-300 hover:bg-slate-800 hover:text-white transition-all mt-1">
+                    <span class="flex items-center gap-3">
+                        <i class="fa-solid fa-users-viewfinder w-5 text-center text-amber-400"></i>
+                        <span>Rekap & Cetak Siswa</span>
+                    </span>
+                    <span id="sidebar-rekap-badge" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">0</span>
+                </button>
+
+                <button onclick="switchTab('gsheet')" id="nav-gsheet" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-sky-300 hover:bg-slate-800 hover:text-white transition-all mt-1">
+                    <i class="fa-solid fa-table w-5 text-center text-sky-400"></i>
+                    <span>Koneksi Google Sheet</span>
+                </button>
+            </nav>
+
+            <!-- Footer Sidebar -->
+            <div class="p-4 border-t border-slate-800 space-y-2">
+                <button onclick="resetToBlank()" class="w-full py-2.5 px-3 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-xs font-medium text-amber-200 flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-file-circle-plus"></i> Buat Rapor Baru (Kosongkan)
+                </button>
+                <button onclick="handleLogout()" class="w-full py-2.5 px-3 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-xs font-medium text-rose-200 flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> Keluar (Logout)
+                </button>
+            </div>
+        </aside>
+
+        <!-- Konten Utama -->
+        <main id="main-content" class="flex-1 p-4 md:p-8 max-w-full overflow-x-hidden">
+            
+            <!-- Top Action Bar -->
+            <div class="no-print mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80">
+                <div>
+                    <h2 id="page-title" class="text-xl font-bold text-slate-800">1. Identitas Peserta Didik & Sekolah</h2>
+                    <p id="page-subtitle" class="text-xs text-slate-500 mt-0.5">Bagian kop atas Halaman 1 Rapor Peserta Didik</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="sendToGoogleSheet()" id="btn-kirim-gsheet" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-xl shadow-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Kirim ke Google Sheet
+                    </button>
+                    <button onclick="saveAllData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> Simpan Lokal
+                    </button>
+                    <button onclick="switchTab('preview')" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl shadow-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-eye"></i> Lihat Hasil Rapor
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1: IDENTITAS PESERTA DIDIK & SEKOLAH -->
+            <section id="tab-identitas" class="tab-section space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
+                        <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-bold">1</span>
+                        Data Peserta Didik & Satuan Pendidikan (Halaman 1)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Nama Peserta Didik</label>
+                            <input type="text" id="in-nama" placeholder="Masukkan nama lengkap peserta didik" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Nomor Induk / NISN</label>
+                            <input type="text" id="in-nisn" placeholder="Contoh: 673 / 0123407253" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Nama Sekolah</label>
+                            <input type="text" id="in-sekolah" placeholder="Contoh: SDN 22 TANAH KERAS" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Alamat Sekolah</label>
+                            <input type="text" id="in-alamat" placeholder="Masukkan alamat sekolah" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Kelas</label>
+                            <input type="text" id="in-kelas" placeholder="Contoh: Kelas 3" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Semester</label>
+                            <input type="text" id="in-semester" placeholder="Contoh: 2 (Dua)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Tahun Pelajaran</label>
+                            <input type="text" id="in-tahun" placeholder="Contoh: 2025/2026" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 uppercase mb-1.5">Kriteria Ketuntasan Minimal (KKM)</label>
+                            <input type="number" id="in-kkm" placeholder="60" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()">
+                            <p class="text-[11px] text-slate-400 mt-1">Digunakan untuk menghitung predikat otomatis (A, B, C, D).</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button onclick="switchTab('sikap')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-xl transition flex items-center gap-2">
+                            Lanjut ke A. Sikap <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: A. SIKAP -->
+            <section id="tab-sikap" class="tab-section hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                        A. SIKAP (Halaman 1)
+                    </h3>
+                    <div class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">1. Sikap Spiritual (Deskripsi)</label>
+                            <textarea id="in-sikap-spiritual" rows="4" placeholder="Contoh: Ananda sangat baik dalam berdoa sebelum dan sesudah melakukan kegiatan, serta taat beribadah..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1.5">2. Sikap Sosial (Deskripsi)</label>
+                            <textarea id="in-sikap-sosial" rows="4" placeholder="Contoh: Ananda menunjukkan sikap jujur, disiplin, tanggung jawab, santun, dan percaya diri dalam berinteraksi..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-between">
+                        <button onclick="switchTab('identitas')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Sebelumnya
+                        </button>
+                        <button onclick="switchTab('nilai')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-xl transition flex items-center gap-2">
+                            Lanjut ke B. Nilai Mapel <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: B. PENGETAHUAN DAN KETERAMPILAN -->
+            <section id="tab-nilai" class="tab-section hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3 mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800">B. PENGETAHUAN DAN KETERAMPILAN (Halaman 1 & Sambungan Halaman 2)</h3>
+                            <p class="text-xs text-slate-500">Mapel 1–4 tampil di Halaman 1; Mapel 5 & Muatan Lokal tampil di Halaman 2 sesuai format gambar.</p>
+                        </div>
+                        <span class="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-semibold rounded-lg border border-blue-200">
+                            KKM Satuan Pendidikan: <span id="badge-kkm">60</span>
+                        </span>
+                    </div>
+
+                    <div id="form-mapel-container" class="space-y-6">
+                        <!-- Diisi via JS -->
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button onclick="switchTab('sikap')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Sebelumnya
+                        </button>
+                        <button onclick="switchTab('ekskul')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-xl transition flex items-center gap-2">
+                            Lanjut ke C & D. Ekskul & Saran <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: C. EKSTRAKURIKULER & D. SARAN-SARAN -->
+            <section id="tab-ekskul" class="tab-section hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                        C. EKSTRAKURIKULER (Halaman 2)
+                    </h3>
+                    <div id="form-ekskul-container" class="space-y-3">
+                        <!-- Diisi via JS -->
+                    </div>
+                    <button onclick="addEkskul()" class="mt-3 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> Tambah Baris Ekstrakurikuler
+                    </button>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                        D. SARAN-SARAN (Halaman 2)
+                    </h3>
+                    <textarea id="in-saran" rows="4" placeholder="Tuliskan saran-saran wali kelas untuk memotivasi peserta didik..." class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" oninput="syncData()"></textarea>
+
+                    <div class="mt-6 flex justify-between">
+                        <button onclick="switchTab('nilai')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Sebelumnya
+                        </button>
+                        <button onclick="switchTab('kesehatan')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-xl transition flex items-center gap-2">
+                            Lanjut ke E & F. Fisik & Kesehatan <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: E. TINGGI & BERAT BADAN + F. KONDISI KESEHATAN -->
+            <section id="tab-kesehatan" class="tab-section hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                        E. TINGGI DAN BERAT BADAN (Halaman 2)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                            <p class="font-bold text-sm text-slate-700 mb-3">1. Tinggi Badan</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Semester 1 (Satu)</label>
+                                    <input type="text" id="in-tb-1" placeholder="Misal: 140 cm" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Semester 2 (Dua)</label>
+                                    <input type="text" id="in-tb-2" placeholder="Misal: 145 cm" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+                            <p class="font-bold text-sm text-slate-700 mb-3">2. Berat Badan</p>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Semester 1 (Satu)</label>
+                                    <input type="text" id="in-bb-1" placeholder="Misal: 38 kg" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-slate-500 mb-1">Semester 2 (Dua)</label>
+                                    <input type="text" id="in-bb-2" placeholder="Misal: 40 kg" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                        F. KONDISI KESEHATAN (Halaman 2)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">1. Pendengaran</label>
+                            <input type="text" id="in-kes-pendengaran" placeholder="Contoh: Baik" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">2. Penglihatan</label>
+                            <input type="text" id="in-kes-penglihatan" placeholder="Contoh: Baik" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">3. Gigi</label>
+                            <input type="text" id="in-kes-gigi" placeholder="Contoh: Sehat / Bersih" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">4. Lainnya</label>
+                            <input type="text" id="in-kes-lainnya" placeholder="Keterangan kesehatan lainnya" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button onclick="switchTab('ekskul')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Sebelumnya
+                        </button>
+                        <button onclick="switchTab('akhir')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium rounded-xl transition flex items-center gap-2">
+                            Lanjut ke Halaman 3 (Prestasi & TTD) <i class="fa-solid fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: G. PRESTASI, H. KETIDAKHADIRAN, KEPUTUSAN & TANDA TANGAN (HALAMAN 3) -->
+            <section id="tab-akhir" class="tab-section hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                        G. PRESTASI (Halaman 3)
+                    </h3>
+                    <div id="form-prestasi-container" class="space-y-3">
+                        <!-- Diisi via JS -->
+                    </div>
+                    <button onclick="addPrestasi()" class="mt-3 px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i> Tambah Baris Prestasi
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- H. Ketidakhadiran -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                        <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                            H. KETIDAKHADIRAN (Halaman 3)
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Sakit (hari)</label>
+                                <input type="text" id="in-sakit" placeholder="Kosongkan jika 0" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Izin (hari)</label>
+                                <input type="text" id="in-izin" placeholder="Kosongkan jika 0" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Tanpa Keterangan (hari)</label>
+                                <input type="text" id="in-alpha" placeholder="Kosongkan jika 0" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Keputusan Kenaikan Kelas -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                        <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                            Kotak Keputusan Kenaikan Kelas (Halaman 3)
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Status Keputusan</label>
+                                <select id="in-keputusan-status" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-medium" onchange="syncData()">
+                                    <option value="NAIK">NAIK KELAS (Coret Tinggal Kelas)</option>
+                                    <option value="TINGGAL">TINGGAL KELAS (Coret Naik Kelas)</option>
+                                    <option value="NONE">Tidak Dicoret Keduanya (Semester 1)</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Ke Kelas (Angka Romawi)</label>
+                                    <input type="text" id="in-keputusan-romawi" placeholder="Contoh: IV" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Terbilang (Huruf)</label>
+                                    <input type="text" id="in-keputusan-terbilang" placeholder="Contoh: EMPAT" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm" oninput="syncData()">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pengesahan & Tanda Tangan -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="text-base font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">
+                        Pengesahan & Tanda Tangan (Halaman 3)
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                            <p class="font-bold text-xs uppercase text-slate-500">1. Orang Tua / Wali</p>
+                            <div>
+                                <label class="block text-xs text-slate-600 mb-1">Nama Orang Tua/Wali</label>
+                                <input type="text" id="in-ortu-nama" placeholder="Nama orang tua/wali" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                            <p class="font-bold text-xs uppercase text-slate-500">2. Wali Kelas</p>
+                            <div>
+                                <label class="block text-xs text-slate-600 mb-1">Tempat & Tanggal Rapor</label>
+                                <input type="text" id="in-tempat-tanggal" placeholder="Contoh: Tanah Keras, 26 Juni 2026" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-600 mb-1">Nama Wali Kelas</label>
+                                <input type="text" id="in-wali-nama" placeholder="Nama lengkap & gelar" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-600 mb-1">NIP Wali Kelas (Opsional)</label>
+                                <input type="text" id="in-wali-nip" placeholder="NIP Wali Kelas" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                            <p class="font-bold text-xs uppercase text-slate-500">3. Kepala Sekolah</p>
+                            <div>
+                                <label class="block text-xs text-slate-600 mb-1">Nama Kepala Sekolah</label>
+                                <input type="text" id="in-kepsek-nama" placeholder="Nama lengkap & gelar" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-600 mb-1">NIP Kepala Sekolah</label>
+                                <input type="text" id="in-kepsek-nip" placeholder="NIP Kepala Sekolah" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" oninput="syncData()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-between">
+                        <button onclick="switchTab('kesehatan')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-xl transition">
+                            <i class="fa-solid fa-arrow-left mr-1"></i> Sebelumnya
+                        </button>
+                        <button onclick="switchTab('preview')" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-md transition flex items-center gap-2">
+                            <i class="fa-solid fa-file-lines"></i> Buka Pratinjau Cetak Rapor
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: PRATINJAU DOKUMEN RAPOR (HALAMAN 1, 2, 3 BERURUTAN) -->
+            <section id="tab-preview" class="tab-section hidden">
+                <!-- Toolbar Pratinjau -->
+                <div class="no-print mb-5 bg-slate-800 text-white p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-circle-info text-blue-400 text-xl"></i>
+                        <div>
+                            <p class="text-sm font-semibold">Format Cetak e-Rapor SD (3 Halaman Berurutan)</p>
+                            <p class="text-xs text-slate-300">Gunakan ukuran kertas <strong>A4</strong> dan aktifkan <em>Background Graphics</em> saat mencetak ke PDF/Printer.</p>
+                        </div>
+                    </div>
+                    <button onclick="window.print()" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-sm rounded-xl shadow transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+                    </button>
+                </div>
+
+                <!-- Wrapper Kertas A4 -->
+                <div class="rapor-scroll-wrapper">
+                    
+                    <!-- ==================== HALAMAN 1 ==================== -->
+                    <div class="rapor-document rapor-page" id="print-page-1">
+                        <div>
+                            <!-- Judul Rapor -->
+                            <h1 class="text-center font-bold text-[15px] tracking-wide mb-5">
+                                RAPOR PESERTA DIDIK DAN PROFIL PESERTA DIDIK
+                            </h1>
+
+                            <!-- Identitas Siswa -->
+                            <div class="grid grid-cols-12 text-[11.5px] mb-5 leading-relaxed">
+                                <div class="col-span-7">
+                                    <table class="w-full">
+                                        <tr>
+                                            <td class="w-36 py-0.5">Nama Peserta Didik</td>
+                                            <td class="w-3">:</td>
+                                            <td class="font-bold uppercase" id="out-nama"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-0.5">Nomor Induk/NISN</td>
+                                            <td>:</td>
+                                            <td id="out-nisn"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-0.5">Nama Sekolah</td>
+                                            <td>:</td>
+                                            <td id="out-sekolah"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-0.5">Alamat</td>
+                                            <td>:</td>
+                                            <td id="out-alamat"></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-span-5 pl-4">
+                                    <table class="w-full">
+                                        <tr>
+                                            <td class="w-28 py-0.5">Kelas</td>
+                                            <td class="w-3">:</td>
+                                            <td id="out-kelas"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-0.5">Semester</td>
+                                            <td>:</td>
+                                            <td id="out-semester"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-0.5">Tahun Pelajaran</td>
+                                            <td>:</td>
+                                            <td id="out-tahun"></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Bagian A. SIKAP -->
+                            <div class="mb-5">
+                                <h2 class="font-bold text-[12px] mb-1.5">A. SIKAP</h2>
+                                <table class="rapor-table">
+                                    <thead>
+                                        <tr>
+                                            <th colspan="2" class="py-1.5 text-[12px]">Deskripsi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="w-[24%] font-bold align-top py-3 px-2.5 h-28 text-[12px]">1. Sikap Spiritual</td>
+                                            <td class="align-top py-3 px-3 text-[11.5px]" id="out-sikap-spiritual"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="w-[24%] font-bold align-top py-3 px-2.5 h-28 text-[12px]">2. Sikap Sosial</td>
+                                            <td class="align-top py-3 px-3 text-[11.5px]" id="out-sikap-sosial"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Bagian B. PENGETAHUAN DAN KETERAMPILAN (Mapel 1 - 4) -->
+                            <div>
+                                <h2 class="font-bold text-[12px] mb-0.5">B. PENGETAHUAN DAN KETERAMPILAN</h2>
+                                <p class="font-bold text-[11.5px] mb-1.5">Kriteria Ketuntasan Minimal Satuan Pendidikan= <span id="out-kkm">60</span></p>
+                                
+                                <table class="rapor-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" class="w-[5%]">No</th>
+                                            <th rowspan="2" class="w-[23%]">Mata Pelajaran</th>
+                                            <th colspan="3" class="w-[36%]">Pengetahuan</th>
+                                            <th colspan="3" class="w-[36%]">Keterampilan</th>
+                                        </tr>
+                                        <tr>
+                                            <th class="w-[6%]">Angka</th>
+                                            <th class="w-[7%]">Predikat</th>
+                                            <th class="w-[23%]">Deskripsi</th>
+                                            <th class="w-[6%]">Angka</th>
+                                            <th class="w-[7%]">Predikat</th>
+                                            <th class="w-[23%]">Deskripsi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="out-tbody-hal1">
+                                        <!-- Mapel 1 - 4 dirender di sini -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Footer Halaman 1 -->
+                        <div class="rapor-footer">
+                            <span>RAPOR - <span class="uppercase out-footer-nama"></span></span>
+                            <span>Dicetak dari eRapor SD &nbsp;&nbsp;|&nbsp; 1</span>
+                        </div>
+                    </div>
+
+                    <!-- ==================== HALAMAN 2 ==================== -->
+                    <div class="rapor-document rapor-page" id="print-page-2">
+                        <div>
+                            <!-- Lanjutan Tabel B (Mapel 5 & Muatan Lokal) -->
+                            <div class="mb-5">
+                                <table class="rapor-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" class="w-[5%]">No</th>
+                                            <th rowspan="2" class="w-[23%]">Mata Pelajaran</th>
+                                            <th colspan="3" class="w-[36%]">Pengetahuan</th>
+                                            <th colspan="3" class="w-[36%]">Keterampilan</th>
+                                        </tr>
+                                        <tr>
+                                            <th class="w-[6%]">Angka</th>
+                                            <th class="w-[7%]">Predikat</th>
+                                            <th class="w-[23%]">Deskripsi</th>
+                                            <th class="w-[6%]">Angka</th>
+                                            <th class="w-[7%]">Predikat</th>
+                                            <th class="w-[23%]">Deskripsi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="out-tbody-hal2">
+                                        <!-- Mapel 5 & Muatan Lokal dirender di sini -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Bagian C. EKSTRAKURIKULER -->
+                            <div class="mb-5">
+                                <h2 class="font-bold text-[12px] mb-1.5">C. EKSTRAKURIKULER</h2>
+                                <table class="rapor-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="w-[5%]">No</th>
+                                            <th class="w-[32%]">Kegiatan Ekstrakurikuler</th>
+                                            <th class="w-[63%]">Keterangan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="out-tbody-ekskul">
+                                        <!-- Ekskul dirender di sini -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Bagian D. SARAN-SARAN -->
+                            <div class="mb-5">
+                                <h2 class="font-bold text-[12px] mb-1.5">D. SARAN-SARAN</h2>
+                                <div class="border border-black p-3 min-h-[58px] text-[11.5px]" id="out-saran"></div>
+                            </div>
+
+                            <!-- Bagian E. TINGGI DAN BERAT BADAN -->
+                            <div class="mb-5">
+                                <h2 class="font-bold text-[12px] mb-1.5">E. TINGGI DAN BERAT BADAN</h2>
+                                <table class="rapor-table">
+                                    <thead>
+                                        <tr>
+                                            <th rowspan="2" class="w-[5%]">No</th>
+                                            <th rowspan="2" class="w-[61%]">Aspek Yang Dinilai</th>
+                                            <th colspan="2" class="w-[34%]">Semester</th>
+                                        </tr>
+                                        <tr>
+                                            <th class="w-[17%]">1 (Satu)</th>
+                                            <th class="w-[17%]">2 (Dua)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-center">1</td>
+                                            <td>Tinggi Badan</td>
+                                            <td class="text-center" id="out-tb-1"></td>
+                                            <td class="text-center" id="out-tb-2"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">2</td>
+                                            <td>Berat Badan</td>
+                                            <td class="text-center" id="out-bb-1"></td>
+                                            <td class="text-center" id="out-bb-2"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Bagian F. KONDISI KESEHATAN -->
+                            <div>
+                                <h2 class="font-bold text-[12px] mb-1.5">F. KONDISI KESEHATAN</h2>
+                                <table class="rapor-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="w-[5%]">No</th>
+                                            <th class="w-[23%]">Aspek Yang Dinilai</th>
+                                            <th class="w-[72%]">Keterangan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-center">1</td>
+                                            <td>Pendengaran</td>
+                                            <td id="out-kes-pendengaran"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">2</td>
+                                            <td>Penglihatan</td>
+                                            <td id="out-kes-penglihatan"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">3</td>
+                                            <td>Gigi</td>
+                                            <td id="out-kes-gigi"></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">4</td>
+                                            <td>Lainnya</td>
+                                            <td id="out-kes-lainnya"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Footer Halaman 2 -->
+                        <div class="rapor-footer">
+                            <span>RAPOR - <span class="uppercase out-footer-nama"></span></span>
+                            <span>Dicetak dari eRapor SD &nbsp;&nbsp;|&nbsp; 2</span>
+                        </div>
+                    </div>
+
+                    <!-- ==================== HALAMAN 3 ==================== -->
+                    <div class="rapor-document rapor-page" id="print-page-3">
+                        <div>
+                            <!-- Bagian G. PRESTASI -->
+                            <div class="mb-6">
+                                <h2 class="font-bold text-[12px] mb-1.5">G. PRESTASI</h2>
+                                <table class="rapor-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="w-[5%]">No</th>
+                                            <th class="w-[28%]">Jenis Prestasi</th>
+                                            <th class="w-[67%]">Keterangan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="out-tbody-prestasi">
+                                        <!-- Prestasi dirender di sini -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Bagian H. KETIDAKHADIRAN & KOTAK KEPUTUSAN -->
+                            <div class="mb-8">
+                                <h2 class="font-bold text-[12px] mb-1.5">H. KETIDAKHADIRAN</h2>
+                                <div class="flex flex-row justify-between items-start gap-6">
+                                    <!-- Tabel Ketidakhadiran -->
+                                    <div class="w-[48%]">
+                                        <table class="rapor-table">
+                                            <tr>
+                                                <td class="w-[55%] py-1.5 px-3">Sakit</td>
+                                                <td class="w-[5%] border-l-0 border-r-0 text-center">:</td>
+                                                <td class="w-[40%] border-l-0 px-2"><span id="out-sakit"></span> hari</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="py-1.5 px-3">Izin</td>
+                                                <td class="border-l-0 border-r-0 text-center">:</td>
+                                                <td class="border-l-0 px-2"><span id="out-izin"></span> hari</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="py-1.5 px-3">Tanpa Keterangan</td>
+                                                <td class="border-l-0 border-r-0 text-center">:</td>
+                                                <td class="border-l-0 px-2"><span id="out-alpha"></span> hari</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- Kotak Keputusan -->
+                                    <div class="w-[48%] border border-black p-3.5 text-[11.5px] leading-relaxed">
+                                        <p class="font-bold mb-1">Keputusan:</p>
+                                        <p class="mb-3">Berdasarkan pencapaian seluruh kompetensi, peserta didik dinyatakan:</p>
+                                        <p class="font-bold tracking-wide">
+                                            <span id="out-kep-naik">NAIK</span> / <span id="out-kep-tinggal">TINGGAL</span> KELAS *) : 
+                                            <span class="underline font-bold px-2" id="out-kep-romawi">......</span> 
+                                            ( <span class="underline font-bold px-2" id="out-kep-terbilang">............</span> )
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tanda Tangan Orang Tua & Wali Kelas -->
+                            <div class="grid grid-cols-12 text-[11.5px] mt-6 px-2">
+                                <div class="col-span-6">
+                                    <p>Mengetahui</p>
+                                    <p>Orang Tua/Wali,</p>
+                                    <div class="h-16"></div>
+                                    <p class="font-bold uppercase tracking-wide" id="out-ortu-nama"></p>
+                                </div>
+                                <div class="col-span-6 pl-12">
+                                    <p id="out-tempat-tanggal"></p>
+                                    <p>Wali Kelas,</p>
+                                    <div class="h-16"></div>
+                                    <p class="font-bold underline" id="out-wali-nama"></p>
+                                    <p>NIP. <span id="out-wali-nip"></span></p>
+                                </div>
+                            </div>
+
+                            <!-- Tanda Tangan Kepala Sekolah (Tengah Bawah) -->
+                            <div class="flex justify-center text-[11.5px] mt-6">
+                                <div class="w-64">
+                                    <p>Mengetahui</p>
+                                    <p>Kepala Sekolah</p>
+                                    <div class="h-16"></div>
+                                    <p class="font-bold underline" id="out-kepsek-nama"></p>
+                                    <p>NIP. <span id="out-kepsek-nip"></span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer Halaman 3 -->
+                        <div class="rapor-footer">
+                            <span>RAPOR - <span class="uppercase out-footer-nama"></span></span>
+                            <span>Dicetak dari eRapor SD &nbsp;&nbsp;|&nbsp; 3</span>
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- TAB 8: REKAP DATA PESERTA DIDIK & CETAK RAPOR -->
+            <section id="tab-rekap" class="tab-section hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-5">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-clipboard-list text-amber-500"></i>
+                                Rekapitulasi Rapor Peserta Didik Terkirim
+                            </h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Daftar peserta didik yang telah dikirim ke Google Sheet. Klik <strong>Cetak Rapor</strong> untuk membuka & mencetak format rapor 3 halaman.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="rekap-search" oninput="renderRekapTable()" placeholder="Cari nama / NISN..." class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <button onclick="mulaiPesertaBerikutnya()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 shrink-0">
+                                <i class="fa-solid fa-user-plus"></i> Input Peserta Baru
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-700 text-xs uppercase tracking-wider border-b border-slate-200">
+                                    <th class="py-3 px-4 text-center w-12">No</th>
+                                    <th class="py-3 px-4">Nama Peserta Didik</th>
+                                    <th class="py-3 px-4">NIS / NISN</th>
+                                    <th class="py-3 px-4">Kelas / Sem</th>
+                                    <th class="py-3 px-4 text-center">Rata-Rata</th>
+                                    <th class="py-3 px-4 text-center">Keputusan</th>
+                                    <th class="py-3 px-4">Waktu Kirim</th>
+                                    <th class="py-3 px-4 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rekap-tbody" class="divide-y divide-slate-200 text-xs">
+                                <!-- Diisi via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 9: PENGATURAN KONEKSI GOOGLE SHEET -->
+            <section id="tab-gsheet" class="tab-section hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200/80">
+                    <div class="flex items-center gap-3 border-b border-slate-100 pb-4 mb-5">
+                        <div class="w-11 h-11 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center text-xl">
+                            <i class="fa-solid fa-file-excel"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800">Koneksi Otomatis ke Google Spreadsheet</h3>
+                            <p class="text-xs text-slate-500">Hubungkan aplikasi ini dengan URL Web App Google Apps Script Anda.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label for="in-gsheet-url" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">URL Web App Google Apps Script</label>
+                            <input type="url" id="in-gsheet-url" value="https://script.google.com/macros/s/AKfycbxXYXiC37yjoxaIF7DGpZ48yGtqZKpofb692qaH1vDRtxqT7UaFDW6arxSyYBtm5yDTlg/exec" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm font-mono">
+                            <p class="text-[11px] text-emerald-600 font-medium mt-1.5"><i class="fa-solid fa-circle-check mr-1"></i> URL Web App telah terpasang otomatis. Sheet <strong>Database_Rapor_SD</strong> beserta seluruh kolom header akan dibuat otomatis saat data dikirim.</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3 pt-2">
+                            <button onclick="saveGSheetUrl()" class="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-semibold rounded-xl shadow-sm transition flex items-center gap-2">
+                                <i class="fa-solid fa-link"></i> Simpan URL Koneksi
+                            </button>
+                            <button onclick="sendToGoogleSheet()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl shadow-sm transition flex items-center gap-2">
+                                <i class="fa-solid fa-paper-plane"></i> Tes Kirim Data Rapor Sekarang
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-2">
+                        <p class="font-bold text-slate-800"><i class="fa-solid fa-circle-info text-sky-600 mr-1"></i> Langkah Singkat Pemasangan:</p>
+                        <ol class="list-decimal list-inside space-y-1">
+                            <li>Buka Google Spreadsheet baru &rarr; klik menu <strong>Ekstensi &gt; Apps Script</strong>.</li>
+                            <li>Tempel kode dari file <code>Code.gs</code> yang telah disediakan, lalu simpan.</li>
+                            <li>Klik <strong>Terapkan (Deploy) &gt; Deployment baru &gt; Aplikasi web</strong>.</li>
+                            <li>Atur <em>Yang memiliki akses</em> menjadi <strong>Siapa saja (Anyone)</strong>, lalu klik Terapkan.</li>
+                            <li>Salin <strong>URL Aplikasi web</strong> dan tempel pada kolom di atas.</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    </div> <!-- Penutup app-wrapper -->
+
+    <script>
+        // URL Default Web App Google Apps Script yang sudah dihubungkan
+        const DEFAULT_GSHEET_URL = "https://script.google.com/macros/s/AKfycbxXYXiC37yjoxaIF7DGpZ48yGtqZKpofb692qaH1vDRtxqT7UaFDW6arxSyYBtm5yDTlg/exec";
+
+        // Konfigurasi Kredensial Login
+        const AUTH_CREDENTIALS = {
+            username: "SDN22TK",
+            password: "12345"
+        };
+
+        // Struktur Data Kosong Bawaan
+        function getBlankState() {
+            return {
+                identitas: {
+                    nama: "",
+                    nisn: "",
+                    sekolah: "",
+                    alamat: "",
+                    kelas: "",
+                    semester: "",
+                    tahun: "",
+                    kkm: 60
+                },
+                sikap: {
+                    spiritual: "",
+                    sosial: ""
+                },
+                mapelUtama: [
+                    { nama: "Pendidikan Agama Islam", pAngka: "", pDeskripsi: "", kAngka: "", kDeskripsi: "" },
+                    { nama: "Pendidikan Pancasila dan Kewarganegaraan", pAngka: "", pDeskripsi: "", kAngka: "", kDeskripsi: "" },
+                    { nama: "Bahasa Indonesia", pAngka: "", pDeskripsi: "", kAngka: "", kDeskripsi: "" },
+                    { nama: "Matematika", pAngka: "", pDeskripsi: "", kAngka: "", kDeskripsi: "" },
+                    { nama: "Pendidikan Jasmani, Olahraga, dan Kesehatan", pAngka: "", pDeskripsi: "", kAngka: "", kDeskripsi: "" }
+                ],
+                muatanLokal: [
+                    { nama: "Pendidikan Alqur'an", pAngka: "", pDeskripsi: "", kAngka: "", kDeskripsi: "" },
+                    { nama: "Seni Budaya dan Prakarya", pAngka: "", pDeskripsi: "", kAngka: "", kDeskripsi: "" },
+                    { nama: "P.A", pAngka: "", pDeskripsi: "", kAngka: "", kDeskripsi: "" }
+                ],
+                ekskul: [
+                    { kegiatan: "", keterangan: "" },
+                    { kegiatan: "", keterangan: "" }
+                ],
+                saran: "",
+                fisik: {
+                    tb1: "",
+                    tb2: "",
+                    bb1: "",
+                    bb2: ""
+                },
+                kesehatan: {
+                    pendengaran: "",
+                    penglihatan: "",
+                    gigi: "",
+                    lainnya: ""
+                },
+                prestasi: [
+                    { jenis: "", keterangan: "" },
+                    { jenis: "", keterangan: "" }
+                ],
+                absensi: {
+                    sakit: "",
+                    izin: "",
+                    alpha: ""
+                },
+                keputusan: {
+                    status: "NAIK",
+                    romawi: "",
+                    terbilang: ""
+                },
+                pengesahan: {
+                    ortuNama: "",
+                    tempatTanggal: "",
+                    waliNama: "",
+                    waliNip: "",
+                    kepsekNama: "",
+                    kepsekNip: ""
+                }
+            };
+        }
+
+        // Memuat state dari localStorage atau membuat state kosong baru
+        let raporData = (() => {
+            try {
+                const saved = localStorage.getItem('erapor_sd_data_v2');
+                return saved ? JSON.parse(saved) : getBlankState();
+            } catch (e) {
+                return getBlankState();
+            }
+        })();
+
+        // Daftar Rekap Peserta Didik yang telah dikirim ke Google Sheet
+        let rekapList = (() => {
+            try {
+                const savedRekap = localStorage.getItem('erapor_sd_rekap_list');
+                return savedRekap ? JSON.parse(savedRekap) : [];
+            } catch (e) {
+                return [];
+            }
+        })();
+
+        function saveRekapList() {
+            try {
+                localStorage.setItem('erapor_sd_rekap_list', JSON.stringify(rekapList));
+                updateRekapBadge();
+            } catch (e) {
+                console.error("Gagal menyimpan rekap:", e);
+            }
+        }
+
+        function updateRekapBadge() {
+            const badge = document.getElementById('sidebar-rekap-badge');
+            if (badge) badge.textContent = rekapList.length;
+        }
+
+        function checkAuthStatus() {
+            const isLoggedIn = sessionStorage.getItem('erapor_sd_logged_in') === 'true';
+            const loginScreen = document.getElementById('login-screen');
+            const appWrapper = document.getElementById('app-wrapper');
+            if (isLoggedIn) {
+                loginScreen.classList.add('hidden');
+                appWrapper.classList.remove('hidden');
+            } else {
+                loginScreen.classList.remove('hidden');
+                appWrapper.classList.add('hidden');
+            }
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const user = document.getElementById('login-username').value.trim();
+            const pass = document.getElementById('login-password').value;
+            const errorBox = document.getElementById('login-error');
+
+            if (user === AUTH_CREDENTIALS.username && pass === AUTH_CREDENTIALS.password) {
+                errorBox.classList.add('hidden');
+                sessionStorage.setItem('erapor_sd_logged_in', 'true');
+                checkAuthStatus();
+                showToast("Selamat datang di Aplikasi e-Rapor SD!");
+            } else {
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        function handleLogout() {
+            sessionStorage.removeItem('erapor_sd_logged_in');
+            document.getElementById('login-password').value = '';
+            checkAuthStatus();
+        }
+
+        function togglePasswordVisibility() {
+            const passInput = document.getElementById('login-password');
+            const eyeIcon = document.getElementById('eye-icon');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                passInput.type = 'password';
+                eyeIcon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3200);
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        const TAB_META = {
+            identitas: { title: "1. Identitas Peserta Didik & Sekolah", sub: "Bagian kop atas Halaman 1 Rapor Peserta Didik" },
+            sikap: { title: "2. A. Sikap (Spiritual & Sosial)", sub: "Deskripsi penilaian sikap peserta didik pada Halaman 1" },
+            nilai: { title: "3. B. Nilai Pengetahuan & Keterampilan", sub: "Input nilai angka dan deskripsi setiap mata pelajaran & muatan lokal" },
+            ekskul: { title: "4. C. Ekstrakurikuler & D. Saran-Saran", sub: "Pengisian kegiatan ekstrakurikuler dan saran wali kelas (Halaman 2)" },
+            kesehatan: { title: "5. E. Tinggi/Berat Badan & F. Kondisi Kesehatan", sub: "Data pertumbuhan fisik dan kesehatan peserta didik (Halaman 2)" },
+            akhir: { title: "6. G. Prestasi, H. Ketidakhadiran, Keputusan & TTD", sub: "Bagian penutup rapor pada Halaman 3" },
+            preview: { title: "Pratinjau & Cetak Dokumen Rapor", sub: "Tampilan siap cetak 3 halaman berurutan sesuai format e-Rapor SD" },
+            rekap: { title: "Rekapitulasi Peserta Didik & Cetak Rapor", sub: "Pilih peserta didik dari rekap untuk mencetak ulang atau mengedit rapor" },
+            gsheet: { title: "Koneksi & Sinkronisasi Google Sheet", sub: "Pengaturan URL Web App Google Apps Script" }
+        };
+
+        function switchTab(tabKey) {
+            document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
+            const target = document.getElementById('tab-' + tabKey);
+            if (target) target.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.id === 'nav-preview') {
+                    btn.className = "nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-emerald-300 bg-emerald-950/50 border border-emerald-800/60 hover:bg-emerald-900/60 transition-all";
+                } else if (btn.id === 'nav-rekap') {
+                    btn.className = "nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-amber-300 hover:bg-slate-800 hover:text-white transition-all mt-1";
+                } else {
+                    btn.className = "nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all";
+                }
+            });
+
+            const activeBtn = document.getElementById('nav-' + tabKey);
+            if (activeBtn && tabKey !== 'preview') {
+                if (tabKey === 'rekap') {
+                    activeBtn.className = "nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-600 text-white shadow-md mt-1";
+                } else {
+                    activeBtn.className = "nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all bg-blue-600 text-white shadow-md";
+                }
+            }
+
+            if (TAB_META[tabKey]) {
+                document.getElementById('page-title').textContent = TAB_META[tabKey].title;
+                document.getElementById('page-subtitle').textContent = TAB_META[tabKey].sub;
+            }
+
+            if (tabKey === 'preview') {
+                syncData();
+                renderPreview();
+            } else if (tabKey === 'rekap') {
+                renderRekapTable();
+            }
+
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    toggleSidebar();
+                }
+            }
+        }
+
+        function hitungPredikat(nilaiStr, kkm) {
+            if (nilaiStr === "" || nilaiStr === null || isNaN(Number(nilaiStr))) return "";
+            const n = Number(nilaiStr);
+            const k = Number(kkm) || 60;
+            const interval = (100 - k) / 3;
+            if (n < k) return "D";
+            if (n < k + interval) return "C";
+            if (n < k + (interval * 2)) return "B";
+            return "A";
+        }
+
+        function populateForms() {
+            document.getElementById('in-nama').value = raporData.identitas.nama || "";
+            document.getElementById('in-nisn').value = raporData.identitas.nisn || "";
+            document.getElementById('in-sekolah').value = raporData.identitas.sekolah || "";
+            document.getElementById('in-alamat').value = raporData.identitas.alamat || "";
+            document.getElementById('in-kelas').value = raporData.identitas.kelas || "";
+            document.getElementById('in-semester').value = raporData.identitas.semester || "";
+            document.getElementById('in-tahun').value = raporData.identitas.tahun || "";
+            document.getElementById('in-kkm').value = raporData.identitas.kkm || 60;
+            document.getElementById('badge-kkm').textContent = raporData.identitas.kkm || 60;
+
+            document.getElementById('in-sikap-spiritual').value = raporData.sikap.spiritual || "";
+            document.getElementById('in-sikap-sosial').value = raporData.sikap.sosial || "";
+
+            renderMapelForms();
+            renderEkskulForms();
+
+            document.getElementById('in-saran').value = raporData.saran || "";
+
+            document.getElementById('in-tb-1').value = raporData.fisik.tb1 || "";
+            document.getElementById('in-tb-2').value = raporData.fisik.tb2 || "";
+            document.getElementById('in-bb-1').value = raporData.fisik.bb1 || "";
+            document.getElementById('in-bb-2').value = raporData.fisik.bb2 || "";
+
+            document.getElementById('in-kes-pendengaran').value = raporData.kesehatan.pendengaran || "";
+            document.getElementById('in-kes-penglihatan').value = raporData.kesehatan.penglihatan || "";
+            document.getElementById('in-kes-gigi').value = raporData.kesehatan.gigi || "";
+            document.getElementById('in-kes-lainnya').value = raporData.kesehatan.lainnya || "";
+
+            renderPrestasiForms();
+
+            document.getElementById('in-sakit').value = raporData.absensi.sakit || "";
+            document.getElementById('in-izin').value = raporData.absensi.izin || "";
+            document.getElementById('in-alpha').value = raporData.absensi.alpha || "";
+
+            document.getElementById('in-keputusan-status').value = raporData.keputusan.status || "NAIK";
+            document.getElementById('in-keputusan-romawi').value = raporData.keputusan.romawi || "";
+            document.getElementById('in-keputusan-terbilang').value = raporData.keputusan.terbilang || "";
+
+            document.getElementById('in-ortu-nama').value = raporData.pengesahan.ortuNama || "";
+            document.getElementById('in-tempat-tanggal').value = raporData.pengesahan.tempatTanggal || "";
+            document.getElementById('in-wali-nama').value = raporData.pengesahan.waliNama || "";
+            document.getElementById('in-wali-nip').value = raporData.pengesahan.waliNip || "";
+            document.getElementById('in-kepsek-nama').value = raporData.pengesahan.kepsekNama || "";
+            document.getElementById('in-kepsek-nip').value = raporData.pengesahan.kepsekNip || "";
+
+            updateSidebarStudentInfo();
+        }
+
+        function renderMapelForms() {
+            const container = document.getElementById('form-mapel-container');
+            const kkm = raporData.identitas.kkm || 60;
+            let html = '';
+
+            raporData.mapelUtama.forEach((m, idx) => {
+                const pPred = hitungPredikat(m.pAngka, kkm);
+                const kPred = hitungPredikat(m.kAngka, kkm);
+                html += `
+                <div class="p-4 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-3">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                        <div class="flex items-center gap-2 flex-1">
+                            <span class="w-6 h-6 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center justify-center shrink-0">${idx + 1}</span>
+                            <input type="text" value="${m.nama}" onchange="updateMapel('utama', ${idx}, 'nama', this.value)" class="w-full font-bold text-sm text-slate-800 bg-white px-3 py-1.5 rounded-lg border border-slate-300">
+                        </div>
+                        <span class="text-[11px] font-medium text-slate-500">${idx < 4 ? 'Tampil di Halaman 1' : 'Tampil di Halaman 2'}</span>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase text-blue-700">Pengetahuan</span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700" id="pred-utama-p-${idx}">Predikat: ${pPred || '-'}</span>
+                            </div>
+                            <input type="number" min="0" max="100" value="${m.pAngka}" placeholder="Nilai Angka (0-100)" oninput="updateMapel('utama', ${idx}, 'pAngka', this.value)" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+                            <textarea rows="2" placeholder="Deskripsi pengetahuan..." oninput="updateMapel('utama', ${idx}, 'pDeskripsi', this.value)" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs">${m.pDeskripsi}</textarea>
+                        </div>
+                        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase text-emerald-700">Keterampilan</span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700" id="pred-utama-k-${idx}">Predikat: ${kPred || '-'}</span>
+                            </div>
+                            <input type="number" min="0" max="100" value="${m.kAngka}" placeholder="Nilai Angka (0-100)" oninput="updateMapel('utama', ${idx}, 'kAngka', this.value)" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+                            <textarea rows="2" placeholder="Deskripsi keterampilan..." oninput="updateMapel('utama', ${idx}, 'kDeskripsi', this.value)" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs">${m.kDeskripsi}</textarea>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            html += `<div class="pt-3"><h4 class="font-bold text-sm text-slate-700 uppercase tracking-wider">Muatan Lokal (Halaman 2)</h4></div>`;
+
+            raporData.muatanLokal.forEach((m, idx) => {
+                const pPred = hitungPredikat(m.pAngka, kkm);
+                const kPred = hitungPredikat(m.kAngka, kkm);
+                html += `
+                <div class="p-4 rounded-2xl border border-amber-200/80 bg-amber-50/40 space-y-3">
+                    <div class="flex items-center gap-2 border-b border-amber-200/60 pb-2">
+                        <span class="w-6 h-6 rounded-lg bg-amber-600 text-white text-xs font-bold flex items-center justify-center shrink-0">${idx + 1}</span>
+                        <input type="text" value="${m.nama}" onchange="updateMapel('mulok', ${idx}, 'nama', this.value)" class="w-full font-bold text-sm text-slate-800 bg-white px-3 py-1.5 rounded-lg border border-slate-300">
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase text-blue-700">Pengetahuan</span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700" id="pred-mulok-p-${idx}">Predikat: ${pPred || '-'}</span>
+                            </div>
+                            <input type="number" min="0" max="100" value="${m.pAngka}" placeholder="Nilai Angka (0-100)" oninput="updateMapel('mulok', ${idx}, 'pAngka', this.value)" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+                            <textarea rows="2" placeholder="Deskripsi pengetahuan..." oninput="updateMapel('mulok', ${idx}, 'pDeskripsi', this.value)" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs">${m.pDeskripsi}</textarea>
+                        </div>
+                        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold uppercase text-emerald-700">Keterampilan</span>
+                                <span class="text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700" id="pred-mulok-k-${idx}">Predikat: ${kPred || '-'}</span>
+                            </div>
+                            <input type="number" min="0" max="100" value="${m.kAngka}" placeholder="Nilai Angka (0-100)" oninput="updateMapel('mulok', ${idx}, 'kAngka', this.value)" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-sm">
+                            <textarea rows="2" placeholder="Deskripsi keterampilan..." oninput="updateMapel('mulok', ${idx}, 'kDeskripsi', this.value)" class="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs">${m.kDeskripsi}</textarea>
+                        </div>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function updateMapel(group, idx, field, val) {
+            const list = group === 'utama' ? raporData.mapelUtama : raporData.muatanLokal;
+            list[idx][field] = val;
+            const kkm = raporData.identitas.kkm || 60;
+            if (field === 'pAngka') {
+                const badge = document.getElementById(`pred-${group}-p-${idx}`);
+                if (badge) badge.textContent = `Predikat: ${hitungPredikat(val, kkm) || '-'}`;
+            } else if (field === 'kAngka') {
+                const badge = document.getElementById(`pred-${group}-k-${idx}`);
+                if (badge) badge.textContent = `Predikat: ${hitungPredikat(val, kkm) || '-'}`;
+            }
+            saveToLocalStorageQuietly();
+        }
+
+        function renderEkskulForms() {
+            const container = document.getElementById('form-ekskul-container');
+            container.innerHTML = raporData.ekskul.map((item, idx) => `
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <div class="md:col-span-1 text-center font-bold text-xs text-slate-500">#${idx + 1}</div>
+                    <div class="md:col-span-5">
+                        <input type="text" value="${item.kegiatan}" placeholder="Nama Kegiatan Ekstrakurikuler" oninput="raporData.ekskul[${idx}].kegiatan = this.value; saveToLocalStorageQuietly();" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">
+                    </div>
+                    <div class="md:col-span-5">
+                        <input type="text" value="${item.keterangan}" placeholder="Keterangan / Predikat" oninput="raporData.ekskul[${idx}].keterangan = this.value; saveToLocalStorageQuietly();" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">
+                    </div>
+                    <div class="md:col-span-1 text-right">
+                        <button type="button" onclick="removeEkskul(${idx})" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg" title="Hapus baris">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addEkskul() {
+            raporData.ekskul.push({ kegiatan: "", keterangan: "" });
+            renderEkskulForms();
+            saveToLocalStorageQuietly();
+        }
+
+        function removeEkskul(idx) {
+            if (raporData.ekskul.length <= 1) return;
+            raporData.ekskul.splice(idx, 1);
+            renderEkskulForms();
+            saveToLocalStorageQuietly();
+        }
+
+        function renderPrestasiForms() {
+            const container = document.getElementById('form-prestasi-container');
+            container.innerHTML = raporData.prestasi.map((item, idx) => `
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <div class="md:col-span-1 text-center font-bold text-xs text-slate-500">#${idx + 1}</div>
+                    <div class="md:col-span-5">
+                        <input type="text" value="${item.jenis}" placeholder="Jenis Prestasi" oninput="raporData.prestasi[${idx}].jenis = this.value; saveToLocalStorageQuietly();" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">
+                    </div>
+                    <div class="md:col-span-5">
+                        <input type="text" value="${item.keterangan}" placeholder="Keterangan Prestasi" oninput="raporData.prestasi[${idx}].keterangan = this.value; saveToLocalStorageQuietly();" class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm">
+                    </div>
+                    <div class="md:col-span-1 text-right">
+                        <button type="button" onclick="removePrestasi(${idx})" class="p-2 text-rose-500 hover:bg-rose-50 rounded-lg" title="Hapus baris">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addPrestasi() {
+            raporData.prestasi.push({ jenis: "", keterangan: "" });
+            renderPrestasiForms();
+            saveToLocalStorageQuietly();
+        }
+
+        function removePrestasi(idx) {
+            if (raporData.prestasi.length <= 1) return;
+            raporData.prestasi.splice(idx, 1);
+            renderPrestasiForms();
+            saveToLocalStorageQuietly();
+        }
+
+        function updateSidebarStudentInfo() {
+            const nama = raporData.identitas.nama.trim() || "-";
+            const kelas = raporData.identitas.kelas.trim();
+            const sem = raporData.identitas.semester.trim();
+            document.getElementById('sidebar-student-name').textContent = nama;
+            document.getElementById('sidebar-student-class').textContent = kelas ? `${kelas}${sem ? ' • Sem ' + sem : ''}` : "Belum ada data kelas";
+        }
+
+        function syncData() {
+            raporData.identitas.nama = document.getElementById('in-nama').value;
+            raporData.identitas.nisn = document.getElementById('in-nisn').value;
+            raporData.identitas.sekolah = document.getElementById('in-sekolah').value;
+            raporData.identitas.alamat = document.getElementById('in-alamat').value;
+            raporData.identitas.kelas = document.getElementById('in-kelas').value;
+            raporData.identitas.semester = document.getElementById('in-semester').value;
+            raporData.identitas.tahun = document.getElementById('in-tahun').value;
+            raporData.identitas.kkm = Number(document.getElementById('in-kkm').value) || 60;
+            document.getElementById('badge-kkm').textContent = raporData.identitas.kkm;
+
+            raporData.sikap.spiritual = document.getElementById('in-sikap-spiritual').value;
+            raporData.sikap.sosial = document.getElementById('in-sikap-sosial').value;
+
+            raporData.saran = document.getElementById('in-saran').value;
+
+            raporData.fisik.tb1 = document.getElementById('in-tb-1').value;
+            raporData.fisik.tb2 = document.getElementById('in-tb-2').value;
+            raporData.fisik.bb1 = document.getElementById('in-bb-1').value;
+            raporData.fisik.bb2 = document.getElementById('in-bb-2').value;
+
+            raporData.kesehatan.pendengaran = document.getElementById('in-kes-pendengaran').value;
+            raporData.kesehatan.penglihatan = document.getElementById('in-kes-penglihatan').value;
+            raporData.kesehatan.gigi = document.getElementById('in-kes-gigi').value;
+            raporData.kesehatan.lainnya = document.getElementById('in-kes-lainnya').value;
+
+            raporData.absensi.sakit = document.getElementById('in-sakit').value;
+            raporData.absensi.izin = document.getElementById('in-izin').value;
+            raporData.absensi.alpha = document.getElementById('in-alpha').value;
+
+            raporData.keputusan.status = document.getElementById('in-keputusan-status').value;
+            raporData.keputusan.romawi = document.getElementById('in-keputusan-romawi').value;
+            raporData.keputusan.terbilang = document.getElementById('in-keputusan-terbilang').value;
+
+            raporData.pengesahan.ortuNama = document.getElementById('in-ortu-nama').value;
+            raporData.pengesahan.tempatTanggal = document.getElementById('in-tempat-tanggal').value;
+            raporData.pengesahan.waliNama = document.getElementById('in-wali-nama').value;
+            raporData.pengesahan.waliNip = document.getElementById('in-wali-nip').value;
+            raporData.pengesahan.kepsekNama = document.getElementById('in-kepsek-nama').value;
+            raporData.pengesahan.kepsekNip = document.getElementById('in-kepsek-nip').value;
+
+            updateSidebarStudentInfo();
+            saveToLocalStorageQuietly();
+        }
+
+        function saveToLocalStorageQuietly() {
+            try {
+                localStorage.setItem('erapor_sd_data_v2', JSON.stringify(raporData));
+            } catch (e) {
+                console.error("Gagal menyimpan ke localStorage:", e);
+            }
+        }
+
+        function saveAllData() {
+            syncData();
+            showToast("Seluruh data rapor berhasil disimpan secara lokal!");
+        }
+
+        function resetToBlank() {
+            raporData = getBlankState();
+            saveToLocalStorageQuietly();
+            populateForms();
+            renderPreview();
+            switchTab('identitas');
+            showToast("Formulir telah dikosongkan untuk membuat rapor baru.");
+        }
+
+        // Menyiapkan form kosong untuk peserta berikutnya sambil mempertahankan data sekolah, kelas, wali kelas & kepsek
+        function mulaiPesertaBerikutnya() {
+            const prevIdentitas = { ...raporData.identitas };
+            const prevPengesahan = { ...raporData.pengesahan };
+            const prevMapelNames = raporData.mapelUtama.map(m => m.nama);
+            const prevMulokNames = raporData.muatanLokal.map(m => m.nama);
+
+            const nextState = getBlankState();
+            nextState.identitas.sekolah = prevIdentitas.sekolah;
+            nextState.identitas.alamat = prevIdentitas.alamat;
+            nextState.identitas.kelas = prevIdentitas.kelas;
+            nextState.identitas.semester = prevIdentitas.semester;
+            nextState.identitas.tahun = prevIdentitas.tahun;
+            nextState.identitas.kkm = prevIdentitas.kkm;
+
+            nextState.pengesahan.tempatTanggal = prevPengesahan.tempatTanggal;
+            nextState.pengesahan.waliNama = prevPengesahan.waliNama;
+            nextState.pengesahan.waliNip = prevPengesahan.waliNip;
+            nextState.pengesahan.kepsekNama = prevPengesahan.kepsekNama;
+            nextState.pengesahan.kepsekNip = prevPengesahan.kepsekNip;
+
+            nextState.mapelUtama.forEach((m, i) => {
+                if (prevMapelNames[i]) m.nama = prevMapelNames[i];
+            });
+            nextState.muatanLokal.forEach((m, i) => {
+                if (prevMulokNames[i]) m.nama = prevMulokNames[i];
+            });
+
+            raporData = nextState;
+            saveToLocalStorageQuietly();
+            populateForms();
+            renderPreview();
+            switchTab('identitas');
+        }
+
+        function hitungRataRataSiswa(data) {
+            const semuaNilai = [];
+            [...(data.mapelUtama || []), ...(data.muatanLokal || [])].forEach(m => {
+                if (m.pAngka !== "" && !isNaN(Number(m.pAngka))) semuaNilai.push(Number(m.pAngka));
+                if (m.kAngka !== "" && !isNaN(Number(m.kAngka))) semuaNilai.push(Number(m.kAngka));
+            });
+            if (!semuaNilai.length) return "-";
+            const total = semuaNilai.reduce((a, b) => a + b, 0);
+            return (total / semuaNilai.length).toFixed(1);
+        }
+
+        function renderRekapTable() {
+            const tbody = document.getElementById('rekap-tbody');
+            const keyword = (document.getElementById('rekap-search')?.value || "").toLowerCase().trim();
+
+            const filtered = rekapList.filter(item => {
+                const nama = (item.data.identitas.nama || "").toLowerCase();
+                const nisn = (item.data.identitas.nisn || "").toLowerCase();
+                return nama.includes(keyword) || nisn.includes(keyword);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-10 px-4 text-center text-slate-400">
+                            <i class="fa-solid fa-folder-open text-3xl mb-2 block text-slate-300"></i>
+                            <p class="font-medium text-slate-600">Belum ada data rekap peserta didik.</p>
+                            <p class="text-[11px] mt-1">Isi data peserta didik lalu klik tombol <strong>"Kirim ke Google Sheet"</strong> untuk menyimpannya ke rekap.</p>
+                        </td>
+                    </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map((item, index) => {
+                const d = item.data;
+                const rataRata = hitungRataRataSiswa(d);
+                const statusKep = d.keputusan?.status === 'NAIK'
+                    ? `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold">NAIK KELAS ${d.keputusan.romawi || ''}</span>`
+                    : d.keputusan?.status === 'TINGGAL'
+                    ? `<span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 font-semibold">TINGGAL KELAS</span>`
+                    : `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 font-medium">-</span>`;
+
+                return `
+                    <tr class="hover:bg-slate-50/90 transition">
+                        <td class="py-3 px-4 text-center font-semibold text-slate-500">${index + 1}</td>
+                        <td class="py-3 px-4 font-bold text-slate-800 uppercase">${d.identitas.nama || 'Tanpa Nama'}</td>
+                        <td class="py-3 px-4 text-slate-600">${d.identitas.nisn || '-'}</td>
+                        <td class="py-3 px-4 text-slate-600">${d.identitas.kelas || '-'} ${d.identitas.semester ? '(' + d.identitas.semester + ')' : ''}</td>
+                        <td class="py-3 px-4 text-center font-bold text-blue-700">${rataRata}</td>
+                        <td class="py-3 px-4 text-center">${statusKep}</td>
+                        <td class="py-3 px-4 text-slate-500 text-[11px]">${item.waktuKirim}</td>
+                        <td class="py-3 px-4 text-center">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button onclick="cetakDariRekap('${item.id}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold flex items-center gap-1 shadow-sm transition" title="Buka & Cetak Rapor">
+                                    <i class="fa-solid fa-print"></i> Cetak Rapor
+                                </button>
+                                <button onclick="muatDariRekap('${item.id}')" class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg font-semibold transition" title="Edit Data Siswa Ini">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="hapusDariRekap('${item.id}')" class="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition" title="Hapus dari Rekap">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function cetakDariRekap(id) {
+            const found = rekapList.find(item => item.id === id);
+            if (!found) return;
+            raporData = JSON.parse(JSON.stringify(found.data));
+            saveToLocalStorageQuietly();
+            populateForms();
+            switchTab('preview');
+            showToast(`Menampilkan rapor milik ${raporData.identitas.nama || 'Peserta Didik'}.`);
+        }
+
+        function muatDariRekap(id) {
+            const found = rekapList.find(item => item.id === id);
+            if (!found) return;
+            raporData = JSON.parse(JSON.stringify(found.data));
+            saveToLocalStorageQuietly();
+            populateForms();
+            renderPreview();
+            switchTab('identitas');
+            showToast(`Data ${raporData.identitas.nama || 'Peserta Didik'} dimuat ke form editor.`);
+        }
+
+        function hapusDariRekap(id) {
+            rekapList = rekapList.filter(item => item.id !== id);
+            saveRekapList();
+            renderRekapTable();
+            showToast("Data peserta didik dihapus dari daftar rekap.");
+        }
+
+        function buildMapelRow(no, m) {
+            const kkm = raporData.identitas.kkm || 60;
+            const pPred = hitungPredikat(m.pAngka, kkm);
+            const kPred = hitungPredikat(m.kAngka, kkm);
+            return `
+                <tr>
+                    <td class="text-center">${no}</td>
+                    <td>${m.nama}</td>
+                    <td class="text-center">${m.pAngka || ""}</td>
+                    <td class="text-center">${pPred}</td>
+                    <td class="text-[10.5px] leading-snug">${m.pDeskripsi || ""}</td>
+                    <td class="text-center">${m.kAngka || ""}</td>
+                    <td class="text-center">${kPred}</td>
+                    <td class="text-[10.5px] leading-snug">${m.kDeskripsi || ""}</td>
+                </tr>
+            `;
+        }
+
+        function renderPreview() {
+            // Identitas Halaman 1
+            document.getElementById('out-nama').textContent = raporData.identitas.nama;
+            document.getElementById('out-nisn').textContent = raporData.identitas.nisn;
+            document.getElementById('out-sekolah').textContent = raporData.identitas.sekolah;
+            document.getElementById('out-alamat').textContent = raporData.identitas.alamat;
+            document.getElementById('out-kelas').textContent = raporData.identitas.kelas;
+            document.getElementById('out-semester').textContent = raporData.identitas.semester;
+            document.getElementById('out-tahun').textContent = raporData.identitas.tahun;
+            document.getElementById('out-kkm').textContent = raporData.identitas.kkm || 60;
+
+            document.querySelectorAll('.out-footer-nama').forEach(el => {
+                el.textContent = raporData.identitas.nama;
+            });
+
+            // Sikap
+            document.getElementById('out-sikap-spiritual').textContent = raporData.sikap.spiritual;
+            document.getElementById('out-sikap-sosial').textContent = raporData.sikap.sosial;
+
+            // Tabel B Halaman 1 (Mapel 1 - 4)
+            const hal1Rows = raporData.mapelUtama
+                .slice(0, 4)
+                .map((m, i) => buildMapelRow(i + 1, m))
+                .join('');
+            document.getElementById('out-tbody-hal1').innerHTML = hal1Rows;
+
+            // Tabel B Halaman 2 (Mapel 5 & Muatan Lokal)
+            let hal2Rows = raporData.mapelUtama
+                .slice(4)
+                .map((m, i) => buildMapelRow(i + 5, m))
+                .join('');
+            hal2Rows += `<tr><td colspan="8" class="font-bold bg-slate-100 px-2 py-1">Muatan Lokal</td></tr>`;
+            hal2Rows += raporData.muatanLokal
+                .map((m, i) => buildMapelRow(i + 1, m))
+                .join('');
+            document.getElementById('out-tbody-hal2').innerHTML = hal2Rows;
+
+            // Ekstrakurikuler
+            const ekskulRows = raporData.ekskul.length ? raporData.ekskul : [{ kegiatan: "", keterangan: "" }, { kegiatan: "", keterangan: "" }];
+            document.getElementById('out-tbody-ekskul').innerHTML = ekskulRows.map((e, i) => `
+                <tr>
+                    <td class="text-center h-6">${i + 1}</td>
+                    <td>${e.kegiatan}</td>
+                    <td>${e.keterangan}</td>
+                </tr>
+            `).join('');
+
+            // Saran
+            document.getElementById('out-saran').textContent = raporData.saran;
+
+            // Tinggi & Berat Badan
+            document.getElementById('out-tb-1').textContent = raporData.fisik.tb1 || "-";
+            document.getElementById('out-tb-2').textContent = raporData.fisik.tb2;
+            document.getElementById('out-bb-1').textContent = raporData.fisik.bb1 || "-";
+            document.getElementById('out-bb-2').textContent = raporData.fisik.bb2;
+
+            // Kesehatan
+            document.getElementById('out-kes-pendengaran').textContent = raporData.kesehatan.pendengaran;
+            document.getElementById('out-kes-penglihatan').textContent = raporData.kesehatan.penglihatan;
+            document.getElementById('out-kes-gigi').textContent = raporData.kesehatan.gigi;
+            document.getElementById('out-kes-lainnya').textContent = raporData.kesehatan.lainnya;
+
+            // Prestasi
+            const prestasiRows = raporData.prestasi.length ? raporData.prestasi : [{ jenis: "", keterangan: "" }, { jenis: "", keterangan: "" }];
+            document.getElementById('out-tbody-prestasi').innerHTML = prestasiRows.map((p, i) => `
+                <tr>
+                    <td class="text-center h-6">${i + 1}</td>
+                    <td>${p.jenis}</td>
+                    <td>${p.keterangan}</td>
+                </tr>
+            `).join('');
+
+            // Ketidakhadiran
+            document.getElementById('out-sakit').textContent = raporData.absensi.sakit;
+            document.getElementById('out-izin').textContent = raporData.absensi.izin;
+            document.getElementById('out-alpha').textContent = raporData.absensi.alpha;
+
+            // Keputusan Kenaikan
+            const elNaik = document.getElementById('out-kep-naik');
+            const elTinggal = document.getElementById('out-kep-tinggal');
+            elNaik.classList.remove('line-through');
+            elTinggal.classList.remove('line-through');
+            if (raporData.keputusan.status === 'NAIK') {
+                elTinggal.classList.add('line-through');
+            } else if (raporData.keputusan.status === 'TINGGAL') {
+                elNaik.classList.add('line-through');
+            }
+            document.getElementById('out-kep-romawi').textContent = raporData.keputusan.romawi || "......";
+            document.getElementById('out-kep-terbilang').textContent = raporData.keputusan.terbilang || "............";
+
+            // Pengesahan TTD
+            document.getElementById('out-ortu-nama').textContent = raporData.pengesahan.ortuNama;
+            document.getElementById('out-tempat-tanggal').textContent = raporData.pengesahan.tempatTanggal;
+            document.getElementById('out-wali-nama').textContent = raporData.pengesahan.waliNama;
+            document.getElementById('out-wali-nip').textContent = raporData.pengesahan.waliNip;
+            document.getElementById('out-kepsek-nama').textContent = raporData.pengesahan.kepsekNama;
+            document.getElementById('out-kepsek-nip').textContent = raporData.pengesahan.kepsekNip;
+        }
+
+        // Pengaturan & Pengiriman Data ke Google Sheet
+        function saveGSheetUrl() {
+            const url = document.getElementById('in-gsheet-url').value.trim() || DEFAULT_GSHEET_URL;
+            localStorage.setItem('erapor_sd_gsheet_url', url);
+            showToast("URL Google Apps Script berhasil disimpan!");
+        }
+
+        async function sendToGoogleSheet() {
+            syncData();
+            if (!raporData.identitas.nama.trim()) {
+                switchTab('identitas');
+                showToast("Isi Nama Peserta Didik terlebih dahulu sebelum mengirim!");
+                return;
+            }
+
+            const scriptUrl = document.getElementById('in-gsheet-url').value.trim() || localStorage.getItem('erapor_sd_gsheet_url') || DEFAULT_GSHEET_URL;
+
+            if (!scriptUrl) {
+                switchTab('gsheet');
+                showToast("Silakan tempel URL Web App Google Apps Script terlebih dahulu.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-kirim-gsheet');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+
+            try {
+                await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(raporData)
+                });
+
+                // Simpan atau perbarui data siswa di Rekapitulasi Lokal
+                const waktuSekarang = new Date().toLocaleString('id-ID', {
+                    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                const existingIndex = rekapList.findIndex(item =>
+                    (item.data.identitas.nisn && item.data.identitas.nisn === raporData.identitas.nisn) ||
+                    (item.data.identitas.nama.toLowerCase() === raporData.identitas.nama.trim().toLowerCase())
+                );
+
+                const recordObj = {
+                    id: existingIndex >= 0 ? rekapList[existingIndex].id : 'siswa_' + Date.now(),
+                    waktuKirim: waktuSekarang,
+                    data: JSON.parse(JSON.stringify(raporData))
+                };
+
+                if (existingIndex >= 0) {
+                    rekapList[existingIndex] = recordObj;
+                } else {
+                    rekapList.push(recordObj);
+                }
+                saveRekapList();
+
+                const namaTerkirim = raporData.identitas.nama.trim();
+
+                // Otomatis lanjut ke formulir kosong untuk peserta didik berikutnya
+                mulaiPesertaBerikutnya();
+                showToast(`Rapor ${namaTerkirim} terkirim & masuk Rekap! Silakan input peserta berikutnya.`);
+            } catch (err) {
+                console.error("Error kirim ke Google Sheet:", err);
+                showToast("Gagal mengirim data. Periksa koneksi internet atau URL Apps Script.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        // Inisialisasi saat halaman dimuat
+        window.onload = function() {
+            checkAuthStatus();
+            const savedUrl = localStorage.getItem('erapor_sd_gsheet_url') || DEFAULT_GSHEET_URL;
+            localStorage.setItem('erapor_sd_gsheet_url', savedUrl);
+            document.getElementById('in-gsheet-url').value = savedUrl;
+            updateRekapBadge();
+            populateForms();
+            renderPreview();
+        };
+    </script>
+</body>
+</html>
