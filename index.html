@@ -276,7 +276,7 @@
 
                 <button onclick="switchTab('preview')" id="nav-preview" class="nav-btn w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold text-emerald-300 bg-emerald-950/50 border border-emerald-800/60 hover:bg-emerald-900/60 transition-all">
                     <i class="fa-solid fa-file-pdf w-5 text-center text-emerald-400"></i>
-                    <span>Pratinjau Rapor</span>
+                    <span>Pratinjau & Cetak Rapor</span>
                 </button>
 
                 <button onclick="switchTab('rekap')" id="nav-rekap" class="nav-btn w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium text-amber-300 hover:bg-slate-800 hover:text-white transition-all mt-1">
@@ -1062,15 +1062,15 @@
                             <i class="fa-solid fa-file-excel"></i>
                         </div>
                         <div>
-                            <h3 class="text-base font-bold text-slate-800">Koneksi</h3>
-                            <p class="text-xs text-slate-500"></p>
+                            <h3 class="text-base font-bold text-slate-800">Koneksi Otomatis ke Google Spreadsheet</h3>
+                            <p class="text-xs text-slate-500">Hubungkan aplikasi ini dengan URL Web App Google Apps Script Anda.</p>
                         </div>
                     </div>
 
                     <div class="space-y-4">
                         <div>
-                            <label for="in-gsheet-url" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">URL Web App</label>
-                            <input type="url" id="in-gsheet-url" value="https://script.google.com/macros/s/AKfycbxXYXiC37yjoxaIF7DGpZ48yGtqZKpofb692qaH1vDRtxqT7UaFDW6arxSyYBtm5yDTlg/exec" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm font-mono">
+                            <label for="in-gsheet-url" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">URL Web App Google Apps Script</label>
+                            <input type="url" id="in-gsheet-url" value="https://script.google.com/macros/s/AKfycbwFxUgZCMT8S7kmc8PItRnNG1SXAcAEm95wbB86zSGB_kirReXxpS_ExNR6BGKMmayZAg/exec" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm font-mono">
                             <p class="text-[11px] text-emerald-600 font-medium mt-1.5"><i class="fa-solid fa-circle-check mr-1"></i> URL Web App telah terpasang otomatis. Sheet <strong>Database_Rapor_SD</strong> beserta seluruh kolom header akan dibuat otomatis saat data dikirim.</p>
                         </div>
 
@@ -1103,7 +1103,7 @@
 
     <script>
         // URL Default Web App Google Apps Script yang sudah dihubungkan
-        const DEFAULT_GSHEET_URL = "https://script.google.com/macros/s/AKfycbxXYXiC37yjoxaIF7DGpZ48yGtqZKpofb692qaH1vDRtxqT7UaFDW6arxSyYBtm5yDTlg/exec";
+        const DEFAULT_GSHEET_URL = "https://script.google.com/macros/s/AKfycbwFxUgZCMT8S7kmc8PItRnNG1SXAcAEm95wbB86zSGB_kirReXxpS_ExNR6BGKMmayZAg/exec";
 
         // Konfigurasi Kredensial Login
         const AUTH_CREDENTIALS = {
@@ -1261,6 +1261,49 @@
             }
         }
 
+        function fetchGSheetJsonp(scriptUrl) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'eraporGSheetCb_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+                const script = document.createElement('script');
+                const separator = scriptUrl.includes('?') ? '&' : '?';
+                let isSettled = false;
+
+                const cleanup = () => {
+                    if (script.parentNode) script.parentNode.removeChild(script);
+                    delete window[callbackName];
+                };
+
+                const timeoutId = setTimeout(() => {
+                    if (!isSettled) {
+                        isSettled = true;
+                        cleanup();
+                        reject(new Error('Timeout mengambil data Google Sheet'));
+                    }
+                }, 12000);
+
+                window[callbackName] = (data) => {
+                    if (!isSettled) {
+                        isSettled = true;
+                        clearTimeout(timeoutId);
+                        cleanup();
+                        resolve(data);
+                    }
+                };
+
+                script.onerror = () => {
+                    if (!isSettled) {
+                        isSettled = true;
+                        clearTimeout(timeoutId);
+                        cleanup();
+                        reject(new Error('Gagal memuat script JSONP dari Google Sheet'));
+                    }
+                };
+
+                script.src = `${scriptUrl}${separator}callback=${callbackName}&_t=${Date.now()}`;
+                document.body.appendChild(script);
+            });
+        }
+
         async function syncRekapFromGoogleSheet(showNotif = false) {
             const scriptUrl = document.getElementById('in-gsheet-url')?.value.trim() || localStorage.getItem('erapor_sd_gsheet_url') || DEFAULT_GSHEET_URL;
             if (!scriptUrl) return false;
@@ -1273,8 +1316,13 @@
             }
 
             try {
-                const response = await fetch(scriptUrl, { method: 'GET' });
-                const result = await response.json();
+                let result = null;
+                try {
+                    result = await fetchGSheetJsonp(scriptUrl);
+                } catch (jsonpErr) {
+                    const response = await fetch(scriptUrl, { method: 'GET', redirect: 'follow' });
+                    result = await response.json();
+                }
 
                 if (result && Array.isArray(result.records)) {
                     // Gabungkan data dari Google Sheet dengan data lokal tanpa duplikasi
@@ -1318,7 +1366,7 @@
             } catch (err) {
                 console.warn("Gagal mengambil data dari Google Sheet:", err);
                 if (showNotif) {
-                    showToast("Gagal memuat data dari Google Sheet. Pastikan Apps Script sudah di-deploy ulang.");
+                    showToast("Gagal memuat data. Pastikan Apps Script sudah di-deploy ulang (Versi Baru).");
                 }
             } finally {
                 if (btn) {
@@ -2118,9 +2166,9 @@
         // Inisialisasi saat halaman dimuat
         window.onload = function() {
             checkAuthStatus();
-            const savedUrl = localStorage.getItem('erapor_sd_gsheet_url') || DEFAULT_GSHEET_URL;
-            localStorage.setItem('erapor_sd_gsheet_url', savedUrl);
-            document.getElementById('in-gsheet-url').value = savedUrl;
+            // Selalu gunakan URL terbaru dari DEFAULT_GSHEET_URL agar koneksi terbarui otomatis
+            localStorage.setItem('erapor_sd_gsheet_url', DEFAULT_GSHEET_URL);
+            document.getElementById('in-gsheet-url').value = DEFAULT_GSHEET_URL;
             updateRekapBadge();
             populateForms();
             renderPreview();
