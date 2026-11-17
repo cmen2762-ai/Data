@@ -264,7 +264,7 @@
 
                 <button onclick="switchTab('gsheet')" id="nav-gsheet" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-sky-300 hover:bg-slate-800 hover:text-white transition-all mt-1">
                     <i class="fa-solid fa-table w-5 text-center text-sky-400"></i>
-                    <span>Koneksi Google Sheet</span>
+                    <span>Koneksi</span>
                 </button>
             </nav>
 
@@ -290,7 +290,7 @@
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="sendToGoogleSheet()" id="btn-kirim-gsheet" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-xl shadow-sm transition flex items-center gap-2">
-                        <i class="fa-solid fa-cloud-arrow-up"></i> Kirim ke Google Sheet
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Simpan
                     </button>
                     <button onclick="saveAllData()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl shadow-sm transition flex items-center gap-2">
                         <i class="fa-solid fa-floppy-disk"></i> Simpan Lokal
@@ -1030,14 +1030,14 @@
                             <i class="fa-solid fa-file-excel"></i>
                         </div>
                         <div>
-                            <h3 class="text-base font-bold text-slate-800">Koneksi Otomatis ke Google Spreadsheet</h3>
-                            <p class="text-xs text-slate-500">Hubungkan aplikasi ini dengan URL Web App Google Apps Script Anda.</p>
+                            <h3 class="text-base font-bold text-slate-800">Koneksi</h3>
+                            <p class="text-xs text-slate-500"></p>
                         </div>
                     </div>
 
                     <div class="space-y-4">
                         <div>
-                            <label for="in-gsheet-url" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">URL Web App Google Apps Script</label>
+                            <label for="in-gsheet-url" class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">URL Web</label>
                             <input type="url" id="in-gsheet-url" value="https://script.google.com/macros/s/AKfycbxXYXiC37yjoxaIF7DGpZ48yGtqZKpofb692qaH1vDRtxqT7UaFDW6arxSyYBtm5yDTlg/exec" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-sm font-mono">
                             <p class="text-[11px] text-emerald-600 font-medium mt-1.5"><i class="fa-solid fa-circle-check mr-1"></i> URL Web App telah terpasang otomatis. Sheet <strong>Database_Rapor_SD</strong> beserta seluruh kolom header akan dibuat otomatis saat data dikirim.</p>
                         </div>
